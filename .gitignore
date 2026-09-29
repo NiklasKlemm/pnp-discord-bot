@@ -1,0 +1,15 @@
+# Geheimnisse -- niemals committen
+.env
+
+# Echte Laufzeit-Daten der Gruppe (Charaktere, POIs, Eckdaten, hochgeladene Bilder)
+bot_data.db
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Editor-/Tool-Konfiguration, nicht Teil des Projekts
+.claude/

@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Kampagnen-Chronik{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Special+Elite&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #241c13;
+      --surface-alt: #2d2417;
+      --ink: #ecdfc2;
+      --muted: #a4926f;
+      --border: #4a3b22;
+      --accent: #b9862c;
+      --accent-bright: #d8a542;
+      --approved: #5c7a52;
+      --approved-bright: #74965f;
+      --brass: #c9a227;
+      --brass-bright: #e0b93a;
+      /* Aktenpapier-Töne für die Karten im Dashboard */
+      --paper: #f1e6cd;
+      --paper-line: rgba(120,100,70,0.16);
+      --paper-ink: #2a2015;
+      --paper-label: #7a6440;
+      --paper-border: #c9b48a;
+      --paper-field: #fbf5e6;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(ellipse 900px 600px at 15% 0%, rgba(216,165,66,0.1) 0%, transparent 55%),
+        radial-gradient(ellipse 700px 500px at 85% 100%, rgba(116,150,95,0.07) 0%, transparent 55%),
+        var(--bg);
+      box-shadow: inset 0 0 260px rgba(0,0,0,0.7);
+      color: var(--ink);
+      font-family: 'Crimson Pro', serif;
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    /* Im Dashboard hängt das Referenzfoto direkt an body statt am
+       (schmaleren) Inhalts-Container -- so reicht es bis an den
+       Bildschirmrand, unabhängig von der max-width des Inhalts. */
+    body.has-scene {
+      background:
+        radial-gradient(ellipse 900px 600px at 15% 0%, rgba(216,165,66,0.1) 0%, transparent 55%),
+        radial-gradient(ellipse 700px 500px at 85% 100%, rgba(116,150,95,0.07) 0%, transparent 55%),
+        url("{{ url_for('static', filename='img/buero-szene.jpeg') }}") center / cover no-repeat,
+        var(--bg);
+    }
+
+    h1, h2, h3, .display {
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.02em;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    a { color: var(--accent-bright); }
+    summary { cursor: pointer; }
+    ::placeholder { color: var(--muted); opacity: 0.6; }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    /* Dashboard: kein Seiten-Scroll -- die Seite füllt exakt den Bildschirm,
+       das Referenzfoto wird auf die volle Bildschirmdiagonale gezogen (cover),
+       und nur die Spalte mit den bestehenden Charakteren scrollt selbst. */
+    .page-scene {
+      max-width: 1500px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 1.6rem 1.5rem 1.4rem;
+    }
+    .page-scene header.masthead {
+      flex-shrink: 0;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.6rem;
+    }
+    .page-scene .office {
+      flex: 1;
+      min-height: 0;
+      align-items: stretch;
+    }
+    /* Kopfbereich (Titel, Walze/Nieten) bleibt fix stehen -- nur der Inhalt
+       darunter (.panel-scroll) scrollt im "Inneren". Dadurch bleibt der
+       äußere Rahmen inkl. Titel immer sichtbar und beide Panels enden
+       unten sauber an der gleichen Kante. */
+    .page-scene .desk-panel,
+    .page-scene .cabinet-panel {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .page-scene .desk-panel > .section-title,
+    .page-scene .cabinet-panel > .section-title,
+    .page-scene .cabinet-panel > .rivets {
+      flex-shrink: 0;
+    }
+    .page-scene .panel-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    header.masthead {
+      text-align: center;
+      margin-bottom: 3rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    header.masthead::after {
+      content: "";
+      position: absolute;
+      bottom: -1px; left: 50%;
+      transform: translateX(-50%);
+      width: 60px; height: 3px;
+      background: var(--accent);
+      clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
+    }
+
+    header.masthead h1 {
+      font-size: 2.2rem;
+      margin: 0;
+    }
+
+    .status-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+    .top-nav .status-line { margin-top: 0; }
+
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.online { background: var(--approved-bright); box-shadow: 0 0 6px var(--approved-bright); }
+    .dot.offline { background: var(--accent-bright); box-shadow: 0 0 6px var(--accent-bright); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    input[type=text], input[type=password], textarea {
+      width: 100%;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      color: var(--ink);
+      font-family: 'Crimson Pro', serif;
+      font-size: 1rem;
+      padding: 0.6rem 0.7rem;
+      border-radius: 3px;
+      resize: vertical;
+    }
+
+    input[type=text]:focus, textarea:focus, button:focus, input[type=password]:focus {
+      outline: 2px solid var(--accent-bright);
+      outline-offset: 1px;
+    }
+
+    label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+      margin-top: 0.9rem;
+    }
+    label:first-child { margin-top: 0; }
+
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 3px;
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      color: var(--ink);
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+    }
+    button:hover { border-color: var(--muted); }
+
+    .btn-row { display: flex; gap: 0.6rem; margin-top: 1rem; flex-wrap: wrap; }
+
+    /* Das Signature-Element: der Wachssiegel-Knopf zum Freigeben */
+    .seal-button {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      color: #f3e6d8;
+      background: radial-gradient(circle at 35% 30%, var(--accent-bright), var(--accent) 70%);
+      border: none;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 40px;
+      box-shadow:
+        inset 0 2px 3px rgba(255,255,255,0.15),
+        inset 0 -3px 6px rgba(0,0,0,0.35),
+        0 4px 10px rgba(0,0,0,0.4);
+      position: relative;
+    }
+    .seal-button:hover { filter: brightness(1.08); }
+    .seal-button::before {
+      content: "✒";
+      margin-right: 0.4rem;
+      opacity: 0.85;
+    }
+
+    /* Heller Knopf für Formulare auf Aktenpapier (z.B. "Als Entwurf speichern") */
+    .btn-paper {
+      border: 1px solid var(--paper-border);
+      color: var(--paper-ink);
+      background: #e8dab8;
+    }
+    .btn-paper:hover { border-color: #8a6d3a; }
+
+    .tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    .tag.pending { color: var(--muted); }
+    .tag.approved { color: var(--approved-bright); border-color: var(--approved); }
+    /* Variante für Tags auf dem grünen Metall-Panel (Aktenschrank) */
+    .tag.on-metal.pending { color: #d8d5cb; border-color: rgba(0,0,0,0.3); }
+    .tag.on-metal.approved { color: #9fd18a; border-color: #5c7a52; }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      margin: 2.5rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .section-title::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .empty-note {
+      color: var(--muted);
+      font-style: italic;
+      font-size: 0.95rem;
+    }
+
+    .top-nav {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1.2rem;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 0;
+    }
+    .top-nav a {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .top-nav a:hover { color: var(--ink); }
+
+    /* ------------------------------------------------------------------
+       Zweispaltiges Ermittlungsbüro: links der Schreibtisch (neue Akte
+       anlegen), rechts der Aktenschrank (bestehende Akten in Schubladen).
+       ------------------------------------------------------------------ */
+    .office {
+      display: grid;
+      grid-template-columns: minmax(360px, 480px) 1fr;
+      gap: 2.5rem;
+      align-items: start;
+    }
+    @media (max-width: 920px) {
+      .office { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Schreibtisch (links) ---- */
+    .desk-panel {
+      position: relative;
+      border-radius: 10px;
+      padding: 2.4rem 1.6rem 2rem;
+      background: linear-gradient(155deg,#8a5a34 0%,#6f4726 55%,#573818 100%);
+      box-shadow: 0 16px 34px rgba(0,0,0,0.5), inset 0 0 40px rgba(0,0,0,0.25);
+      border: 1px solid #3f2a13;
+    }
+    .desk-panel > .section-title {
+      color: #f3e6d8;
+      margin-top: 2.6rem;
+    }
+    .desk-panel > .section-title::after { background: rgba(0,0,0,0.25); }
+
+    /* Schreibmaschinenwalze als Zierelement oben auf dem Schreibtisch-Panel */
+    .roller-shadow {
+      position: absolute;
+      top: 14px; left: 50%;
+      transform: translateX(-50%);
+      width: 150px; height: 7px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 4px;
+      filter: blur(2px);
+    }
+    .roller-bar {
+      position: absolute;
+      top: -2px; left: 50%;
+      transform: translateX(-50%);
+      width: 132px; height: 38px;
+      background: linear-gradient(160deg,#f0f0f0,#b8b8b8 45%,#7c7c7c 100%);
+      border-radius: 6px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.7);
+    }
+    .roller-knob {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fff, #8f8f8f 70%);
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.45);
+    }
+
+    /* ---- Aktenschrank (rechts) ---- */
+    .cabinet-panel {
+      position: relative;
+      border-radius: 10px;
+      padding: 1.8rem 1.6rem 2rem;
+      background: linear-gradient(160deg,#5c6259 0%,#454a40 50%,#2c3128 100%);
+      box-shadow: 0 16px 34px rgba(0,0,0,0.5), inset 0 0 40px rgba(0,0,0,0.3);
+      border: 1px solid #1c1f18;
+    }
+    .cabinet-panel > .section-title {
+      color: #e8e6df;
+      margin-top: 0;
+    }
+    .cabinet-panel > .section-title::after { background: rgba(0,0,0,0.3); }
+
+    .rivets { display: flex; gap: 0.3rem; margin-bottom: 1.2rem; }
+    .rivet {
+      width: 14px; height: 14px;
+      border-radius: 2px;
+      background: linear-gradient(160deg,#8a8f84,#4a4e44);
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+    }
+
+    /* Eine Schublade -- "Entwürfe" oder "Veröffentlicht" -- als eigenes Metall-Feld */
+    .drawer {
+      position: relative;
+      background: linear-gradient(160deg,#6b7166,#4c5147 60%,#383d33);
+      border-radius: 6px;
+      border: 1px solid #23261f;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+      padding: 1.4rem 1.4rem 1.6rem;
+    }
+    .drawer + .drawer { margin-top: 1.4rem; }
+
+    .drawer-handle {
+      width: 76px; height: 11px;
+      margin: 0 auto 1rem;
+      background: linear-gradient(160deg,#eee,#9a9a9a 50%,#6a6a6a);
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.6);
+    }
+
+    .drawer-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      margin: 0 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: #e8e6df;
+    }
+
+    /* ---- Akte als Blatt Aktenpapier (Formular + bestehende Charaktere) ---- */
+    .paper-card {
+      position: relative;
+      background: var(--paper);
+      background-image: repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
+      border-radius: 2px;
+      padding: 1.8rem 1.6rem 1.5rem;
+      box-shadow: 0 12px 26px rgba(0,0,0,0.4);
+      color: var(--paper-ink);
+    }
+    .drawer .paper-card {
+      border: 1px solid var(--paper-border);
+      padding: 1.5rem;
+      margin-top: 1.6rem;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.4);
+    }
+    .drawer .paper-card:first-of-type { margin-top: 0; }
+
+    .paper-card label { color: var(--paper-label); }
+    .paper-card input[type=text],
+    .paper-card input[type=file],
+    .paper-card textarea {
+      background: var(--paper-field);
+      border: 1px solid var(--paper-border);
+      color: var(--paper-ink);
+    }
+    .paper-card input[type=file] { font-size: 0.9rem; padding: 0.5rem 0.7rem; }
+    .paper-card input[type=text]:focus, .paper-card textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .paper-card summary {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--paper-label);
+    }
+    /* Name-Feld einer bestehenden Akte -- wirkt wie eine Überschrift, kein Eingabefeld */
+    .paper-card .name-field {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      background: transparent;
+      border: none;
+      padding: 0;
+      width: 100%;
+    }
+
+    .folder-tab {
+      position: absolute;
+      top: -0.85rem;
+      left: 1.1rem;
+      font-family: 'Special Elite', 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.7rem;
+      border-radius: 2px 2px 0 0;
+      box-shadow: 0 -2px 4px rgba(0,0,0,0.3);
+      transform: rotate(-1deg);
+      background: var(--brass);
+      color: #241d0c;
+    }
+    .folder-tab.pending-tab { background: var(--muted); color: #241d12; }
+    .folder-tab.approved-tab { background: var(--approved-bright); color: #12190f; }
+  </style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% block nav %}{% endblock %}
+  <div class="page {% block page_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

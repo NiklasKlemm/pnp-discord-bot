@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Anmelden – Kampagnen-Chronik{% endblock %}
+{% block content %}
+<div style="max-width: 360px; margin: 4rem auto 0;">
+  <div class="card">
+    <p class="eyebrow" style="text-align:center;">Zutritt nur für die Gruppe</p>
+    <h1 style="text-align:center; font-size: 1.4rem; margin-top: 0.4rem;">Kampagnen-Chronik</h1>
+    <form method="post">
+      <label for="password">Passwort</label>
+      <input type="password" id="password" name="password" autofocus>
+      <div class="btn-row">
+        <button type="submit" class="seal-button">Betreten</button>
+      </div>
+    </form>
+    {% if error %}
+      <p style="color: var(--accent-bright); margin-top: 1rem; font-size: 0.9rem;">{{ error }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

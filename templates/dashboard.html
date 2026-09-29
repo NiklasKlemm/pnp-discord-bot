@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Kampagnen-Chronik – Dashboard{% endblock %}
+{% block page_class %}page-scene{% endblock %}
+{% block body_class %}has-scene{% endblock %}
+
+{% block nav %}
+<nav class="top-nav">
+  <div class="status-line">
+    <span class="dot {{ 'online' if bot_online else 'offline' }}"></span>
+    Bot ist {{ 'online' if bot_online else 'nicht verbunden' }}
+  </div>
+  <a href="{{ url_for('logout') }}">Abmelden</a>
+</nav>
+{% endblock %}
+
+{% block content %}
+<header class="masthead">
+  <h1>Ermittlungsbüro &middot; Fallakten</h1>
+</header>
+
+<div class="office">
+  <!-- LINKS: Der Schreibtisch -- hier wird eine neue Akte angelegt -->
+  <section class="desk-panel">
+    <div class="roller-shadow"></div>
+    <div class="roller-bar"><div class="roller-knob"></div></div>
+
+    <h2 class="section-title">🖋️ Der Schreibtisch</h2>
+
+    <div class="panel-scroll">
+      <form method="post" action="{{ url_for('add_character') }}" enctype="multipart/form-data" class="paper-card">
+        <span class="folder-tab">Neue Akte</span>
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+        <label for="beruf">Beruf</label>
+        <input type="text" id="beruf" name="beruf" required>
+        <label for="image">Bild (wird im Forum-Thread gepostet)</label>
+        <input type="file" id="image" name="image" accept="image/*">
+        <details open style="margin-top: 0.6rem;">
+          <summary>Weitere Details (erscheinen nur im Forum-Post)</summary>
+          <label for="charakter_alter">Alter</label>
+          <input type="text" id="charakter_alter" name="charakter_alter">
+          <label for="wohnort">Wohnort</label>
+          <input type="text" id="wohnort" name="wohnort">
+          <label for="geburtsort">Geburtsort</label>
+          <input type="text" id="geburtsort" name="geburtsort">
+          <label for="fertigkeiten">Fertigkeiten / Eigenschaften</label>
+          <textarea id="fertigkeiten" name="fertigkeiten" rows="2"></textarea>
+          <label for="hintergrund">Hintergrund</label>
+          <textarea id="hintergrund" name="hintergrund" rows="3"></textarea>
+          <label for="sonstiges">Sonstiges</label>
+          <textarea id="sonstiges" name="sonstiges" rows="2"></textarea>
+        </details>
+        <div class="btn-row">
+          <button type="submit" class="btn-paper">Als Entwurf speichern</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- RECHTS: Der Aktenschrank -- Übersicht aller bestehenden Charaktere -->
+  <aside class="cabinet-panel">
+    <div class="rivets"><span class="rivet"></span><span class="rivet"></span></div>
+
+    <h2 class="section-title">🗄️ Der Aktenschrank</h2>
+
+    <div class="panel-scroll">
+    <div class="drawer">
+      <div class="drawer-handle"></div>
+      <h3 class="drawer-title">
+        Entwürfe
+        <span class="tag on-metal pending">noch nicht veröffentlicht</span>
+      </h3>
+      {% if not pending %}
+        <p class="empty-note">Keine Entwürfe vorhanden.</p>
+      {% endif %}
+      {% for c in pending %}
+        <div class="paper-card">
+          <span class="folder-tab pending-tab">Entwurf</span>
+          {% if c.image_filename %}
+            <img src="{{ url_for('uploaded_file', filename=c.image_filename) }}" style="max-width:120px; max-height:120px; border-radius:4px; margin-bottom:0.8rem; border:1px solid var(--paper-border);">
+          {% endif %}
+          <form method="post" action="{{ url_for('update_character', char_id=c.id) }}">
+            <div class="card-head">
+              <input type="text" name="name" value="{{ c.name }}" class="name-field">
+            </div>
+            <label>Beruf</label>
+            <input type="text" name="beruf" value="{{ c.beruf }}">
+            <details style="margin-top: 0.6rem;">
+              <summary>Weitere Details (erscheinen nur im Forum-Post)</summary>
+              <label>Alter</label>
+              <input type="text" name="charakter_alter" value="{{ c.charakter_alter }}">
+              <label>Wohnort</label>
+              <input type="text" name="wohnort" value="{{ c.wohnort }}">
+              <label>Geburtsort</label>
+              <input type="text" name="geburtsort" value="{{ c.geburtsort }}">
+              <label>Fertigkeiten / Eigenschaften</label>
+              <textarea name="fertigkeiten" rows="2">{{ c.fertigkeiten }}</textarea>
+              <label>Hintergrund</label>
+              <textarea name="hintergrund" rows="3">{{ c.hintergrund }}</textarea>
+              <label>Sonstiges</label>
+              <textarea name="sonstiges" rows="2">{{ c.sonstiges }}</textarea>
+            </details>
+            <div class="btn-row">
+              <button type="submit" class="btn-paper">Änderungen speichern</button>
+            </div>
+          </form>
+          <div class="btn-row" style="margin-top: 0.8rem;">
+            <form method="post" action="{{ url_for('approve_character', char_id=c.id) }}">
+              <button type="submit" class="seal-button" {{ 'disabled' if not bot_online else '' }}>
+                Freigeben &amp; im Discord posten
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('delete_character', char_id=c.id) }}" onsubmit="return confirm('Diesen Entwurf endgültig löschen?');">
+              <button type="submit">Entwurf löschen</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="drawer">
+      <div class="drawer-handle"></div>
+      <h3 class="drawer-title">
+        Veröffentlicht
+        <span class="tag on-metal approved">im Discord sichtbar</span>
+      </h3>
+      {% if not approved %}
+        <p class="empty-note">Noch nichts veröffentlicht.</p>
+      {% endif %}
+      {% for c in approved %}
+        <div class="paper-card">
+          <span class="folder-tab approved-tab">Akte</span>
+          {% if c.image_filename %}
+            <img src="{{ url_for('uploaded_file', filename=c.image_filename) }}" style="max-width:120px; max-height:120px; border-radius:4px; margin-bottom:0.8rem; border:1px solid var(--paper-border);">
+          {% endif %}
+          <form method="post" action="{{ url_for('update_character', char_id=c.id) }}">
+            <div class="card-head">
+              <input type="text" name="name" value="{{ c.name }}" class="name-field">
+            </div>
+            <label>Beruf</label>
+            <input type="text" name="beruf" value="{{ c.beruf }}">
+            <details style="margin-top: 0.6rem;">
+              <summary>Weitere Details (erscheinen nur im Forum-Post)</summary>
+              <label>Alter</label>
+              <input type="text" name="charakter_alter" value="{{ c.charakter_alter }}">
+              <label>Wohnort</label>
+              <input type="text" name="wohnort" value="{{ c.wohnort }}">
+              <label>Geburtsort</label>
+              <input type="text" name="geburtsort" value="{{ c.geburtsort }}">
+              <label>Fertigkeiten / Eigenschaften</label>
+              <textarea name="fertigkeiten" rows="2">{{ c.fertigkeiten }}</textarea>
+              <label>Hintergrund</label>
+              <textarea name="hintergrund" rows="3">{{ c.hintergrund }}</textarea>
+              <label>Sonstiges</label>
+              <textarea name="sonstiges" rows="2">{{ c.sonstiges }}</textarea>
+            </details>
+            <div class="btn-row">
+              <button type="submit" class="btn-paper">Änderungen speichern &amp; im Discord aktualisieren</button>
+            </div>
+          </form>
+          {% if c.forum_thread_url %}
+            <p style="margin: 0.4rem 0;"><a href="{{ c.forum_thread_url }}" target="_blank">Forum-Thread ansehen</a></p>
+          {% endif %}
+          <div class="btn-row">
+            <form method="post" action="{{ url_for('withdraw_character', char_id=c.id) }}">
+              <button type="submit">Zurückziehen (aus Discord entfernen)</button>
+            </form>
+            <form method="post" action="{{ url_for('delete_character', char_id=c.id) }}" onsubmit="return confirm('Diesen Charakter endgültig löschen?');">
+              <button type="submit">Endgültig löschen</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    </div>
+  </aside>
+</div>
+{% endblock %}
